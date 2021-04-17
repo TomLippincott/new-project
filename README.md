@@ -1,6 +1,6 @@
 # Basic pattern for a new research project
 
-This repository is essentially a template for how *I* structure a new project.
+This repository is essentially a template for how *I* structure a new project.  It's a build system, but the rules use a dummy script (just to demonstrate the idea).
 
 ## Initializing and working with a new project
 

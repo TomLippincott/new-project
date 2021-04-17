@@ -8,10 +8,10 @@ The following sequence:
 
 ```
 git clone https://github.com/TomLippincott/new-project
-mv new-project ${PROJECT\_NAME}
-cd ${PROJECT\_NAME}
+mv new-project ${PROJECT_NAME}
+cd ${PROJECT_NAME}
 git remote remove origin
-git remote add origin ${GIT\_URL}
+git remote add origin ${GIT_URL}
 git push --set-upstream origin main
 python3 -m venv venv
 source venv/bin/activate
@@ -19,10 +19,10 @@ pip install -r requirements.txt
 deactivate
 ```
 
-The `${PROJECT\_NAME}` directory is now an (empty) experiment, with version-control, environment, and dependency management.  To work on and run the experiment, you simply run:
+The `${PROJECT_NAME}` directory is now an (empty) experiment, with version-control, environment, and dependency management.  To work on and run the experiment, you simply run:
 
 ```
-cd ${PROJECT\_NAME}
+cd ${PROJECT_NAME}
 source venv/bin/activate
 ```
 
@@ -34,3 +34,14 @@ deactivate
 
 ## Common tasks
 
+Dry run of the build system:
+
+```
+scons -Qn
+```
+
+Actually run the build system:
+
+```
+scons -Q
+```

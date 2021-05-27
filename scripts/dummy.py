@@ -1,5 +1,10 @@
 import argparse
 
+#
+# This script does *nothing* except print out its arguments and touch any files
+# specified as outputs (thus fulfilling a build system's requirements for
+# success).
+#
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()

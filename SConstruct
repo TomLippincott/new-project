@@ -11,6 +11,7 @@ import time
 import imp
 import sys
 import json
+import steamroller
 
 # workaround needed to fix bug with SCons and the pickle module
 del sys.modules['pickle']
@@ -23,17 +24,17 @@ import pickle
 # example, changing the number of folds).
 vars = Variables("custom.py")
 vars.AddVariables(
-    ("OUTPUT_WIDTH", "", 100),
-    ("MODEL_TYPES", "", ["mlp", "cnn", "rnn"]),
+    ("OUTPUT_WIDTH", "", 5000),
+    ("MODEL_TYPES", "", ["naive_bayes", "neural"]),
     ("PARAMETER_VALUES", "", [0.1, 0.5, 0.9]),
     ("DATASETS", "", ["A", "B", "C"]),
-    ("FOLDS", "", 10),
+    ("FOLDS", "", 1),
 )
 
 # Methods on the environment object are used all over the place, but it mostly serves to
 # manage the variables (see above) and builders (see below).
 env = Environment(variables=vars, ENV=os.environ, TARFLAGS="-c -z", TARSUFFIX=".tgz",
-                  tools=["default"],
+                  tools=["default", steamroller.generate],
 )
 
 # Defining a bunch of builders (none of these do anything except "touch" their targets,
@@ -42,24 +43,34 @@ env = Environment(variables=vars, ENV=os.environ, TARFLAGS="-c -z", TARSUFFIX=".
 # and MODEL_TYPE.  When we invoke the TrainModel builder (see below), we'll need to pass
 # in values for these (note that e.g. the existence of a MODEL_TYPES variable above doesn't
 # automatically populate MODEL_TYPE, we'll do this with for-loops).
-env.Append(
-    BUILDERS={
-        "CreateData" : Builder(
-            action="python scripts/dummy.py createdata --outputs ${TARGETS[0]}"
-        ),
-        "ShuffleData" : Builder(
-            action="python scripts/dummy.py shuffledata --dataset ${SOURCES[0]} --outputs ${TARGETS}"
-        ),
-        "TrainModel" : Builder(
-            action="python scripts/dummy.py trainmodel --parameter_value ${PARAMETER_VALUE} --model_type ${MODEL_TYPE} --train ${SOURCES[0]} --dev ${SOURCES[0]} --outputs ${TARGETS[0]}"
-        ),
-        "ApplyModel" : Builder(
-            action="python scripts/dummy.py applymodel --model ${SOURCES[0]} --test ${SOURCES[1]} --outputs ${TARGETS[0]}"
-        ),
-        "GenerateReport" : Builder(
-            action="python scripts/dummy.py generatereport --experimental_results ${SOURCES} --outputs ${TARGETS[0]}"
-        ),
-    }
+env.AddBuilder(
+    "CreateData",
+    "scripts/dummy.py",
+    "createdata --outputs ${TARGETS[0]}"
+)
+
+env.AddBuilder(
+    "ShuffleData",
+    "scripts/dummy.py",
+    "shuffledata --dataset ${SOURCES[0]} --outputs ${TARGETS}"
+)
+
+env.AddBuilder(
+    "TrainModel",
+    "scripts/dummy.py",
+    "trainmodel  --parameter_value ${PARAMETER_VALUE} --model_type ${MODEL_TYPE} --train ${SOURCES[0]} --dev ${SOURCES[0]} --outputs ${TARGETS[0]}"
+)
+
+env.AddBuilder(
+    "ApplyModel",
+    "scripts/dummy.py",
+    "applymodel --model ${SOURCES[0]} --test ${SOURCES[1]} --outputs ${TARGETS[0]}"
+)
+
+env.AddBuilder(
+    "GenerateReport",
+    "scripts/dummy.py",
+    "generatereport --experimental_results ${SOURCES} --outputs ${TARGETS[0]}"
 )
 
 # You can ignore the next three items, they simply make the output a bit more readable and

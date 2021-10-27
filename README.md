@@ -13,8 +13,8 @@ cd ${PROJECT_NAME}
 git remote remove origin
 git remote add origin ${GIT_URL}
 git push --set-upstream origin main
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv local
+source local/bin/activate
 pip install -r requirements.txt
 deactivate
 ```
@@ -23,7 +23,7 @@ The `${PROJECT_NAME}` directory is now an (empty) experiment, with version-contr
 
 ```
 cd ${PROJECT_NAME}
-source venv/bin/activate
+source local/bin/activate
 ```
 
 Running Pip in this sandboxed environment will only have local effects, so e.g. dependencies from different projects won't clash.  After days/weeks/months of work, you can just close the terminal, or just leave the environment with:

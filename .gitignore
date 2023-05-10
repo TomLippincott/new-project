@@ -1,3 +1,7 @@
 *~
-venv
+local
 work
+data
+*pyc
+#*
+*#

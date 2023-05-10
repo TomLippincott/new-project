@@ -33,78 +33,53 @@ vars.AddVariables(
 
 # Methods on the environment object are used all over the place, but it mostly serves to
 # manage the variables (see above) and builders (see below).
-env = Environment(variables=vars, ENV=os.environ, TARFLAGS="-c -z", TARSUFFIX=".tgz",
-                  tools=["default", steamroller.generate],
+env = Environment(
+    variables=vars,
+    ENV=os.environ,
+    tools=[steamroller.generate],
+    
+    # Defining a bunch of builders (none of these do anything except "touch" their targets,
+    # as you can see in the dummy.py script).  Consider in particular the "TrainModel" builder,
+    # which interpolates two variables beyond the standard SOURCES/TARGETS: PARAMETER_VALUE
+    # and MODEL_TYPE.  When we invoke the TrainModel builder (see below), we'll need to pass
+    # in values for these (note that e.g. the existence of a MODEL_TYPES variable above doesn't
+    # automatically populate MODEL_TYPE, we'll do this with for-loops).
+    BUILDERS={
+        "CreateData" : Builder(
+            action="python scripts/create_data.py --outputs ${TARGETS[0]}"
+        ),
+        "ShuffleData" : Builder(
+            action="python scripts/shuffle_data.py --dataset ${SOURCES[0]} --outputs ${TARGETS}"
+        ),
+        "TrainModel" : Builder(
+            action="python scripts/train_model.py --parameter_value ${PARAMETER_VALUE} --model_type ${MODEL_TYPE} --train ${SOURCES[0]} --dev ${SOURCES[1]} --outputs ${TARGETS[0]}"            
+        ),
+        "ApplyModel" : Builder(
+            action="python scripts/apply_model.py --model ${SOURCES[0]} --test ${SOURCES[1]} --outputs ${TARGETS[0]}"
+        ),
+        "GenerateReport" : Builder(
+            action="python scripts/generate_report.py --experimental_results ${SOURCES} --outputs ${TARGETS[0]}"
+        )
+    }
 )
-
-# Defining a bunch of builders (none of these do anything except "touch" their targets,
-# as you can see in the dummy.py script).  Consider in particular the "TrainModel" builder,
-# which interpolates two variables beyond the standard SOURCES/TARGETS: PARAMETER_VALUE
-# and MODEL_TYPE.  When we invoke the TrainModel builder (see below), we'll need to pass
-# in values for these (note that e.g. the existence of a MODEL_TYPES variable above doesn't
-# automatically populate MODEL_TYPE, we'll do this with for-loops).
-env.AddBuilder(
-    "CreateData",
-    "scripts/dummy.py",
-    "createdata --outputs ${TARGETS[0]}"
-)
-
-env.AddBuilder(
-    "ShuffleData",
-    "scripts/dummy.py",
-    "shuffledata --dataset ${SOURCES[0]} --outputs ${TARGETS}"
-)
-
-env.AddBuilder(
-    "TrainModel",
-    "scripts/dummy.py",
-    "trainmodel  --parameter_value ${PARAMETER_VALUE} --model_type ${MODEL_TYPE} --train ${SOURCES[0]} --dev ${SOURCES[0]} --outputs ${TARGETS[0]}"
-)
-
-env.AddBuilder(
-    "ApplyModel",
-    "scripts/dummy.py",
-    "applymodel --model ${SOURCES[0]} --test ${SOURCES[1]} --outputs ${TARGETS[0]}"
-)
-
-env.AddBuilder(
-    "GenerateReport",
-    "scripts/dummy.py",
-    "generatereport --experimental_results ${SOURCES} --outputs ${TARGETS[0]}"
-)
-
-# You can ignore the next three items, they simply make the output a bit more readable and
-# the dependency-tracking a bit faster:
-
-# function for width-aware printing of commands
-def print_cmd_line(s, target, source, env):
-    if len(s) > int(env["OUTPUT_WIDTH"]):
-        print(s[:int(float(env["OUTPUT_WIDTH"]) / 2) - 2] + "..." + s[-int(float(env["OUTPUT_WIDTH"]) / 2) + 1:])
-    else:
-        print(s)
-
-# and the command-printing function
-env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
-
-# and how we decide if a dependency is out of date
-env.Decider("timestamp-newer")
-
 
 # OK, at this point we have defined all the builders and variables, so it's
-# time to specify the actual experiments by iterating over some of the variables:
-
-# Run all combinations of datasets, folds, model types, and parameter values, collecting
-# the build artifacts from applying the models to test data in a list.
+# time to specify the actual experimental process, which will involve
+# running all combinations of datasets, folds, model types, and parameter values,
+# collecting the build artifacts from applying the models to test data in a list.
 #
-# The basic pattern for using a build rule is:
+# The basic pattern for invoking a build rule is:
 #
 #   "Rule(list_of_targets, list_of_sources, VARIABLE1=value, VARIABLE2=value...)"
 #
-# Variables that are defined at the top of this file will get used automatically (e.g.
-# "${OUTPUT_WIDTH}" would get replaced with "100"), but note how arbitrary other variables
-# can also be specified locally, and how this functionality is used to populate the build
-# commands *and* determine output filenames.  It's a very flexible system, and there are
-# surely lots of other ways to accomplish this!
+# Note how variables are specified in each invocation, and their values used to fill
+# in the build commands *and* determine output filenames.  It's a very flexible system,
+# and there are ways to make it less verbose, but in this case explicit is better than
+# implicit.
+#
+# Note also how the outputs ("targets") from earlier invocation are used as the inputs
+# ("sources") to later ones, and how some outputs are also gathered into the "results"
+# variable, so they can be summarized together after each experiment runs.
 results = []
 for dataset_name in env["DATASETS"]:
     data = env.CreateData("work/${DATASET_NAME}/data.txt", [], DATASET_NAME=dataset_name)
